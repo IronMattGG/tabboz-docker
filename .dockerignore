@@ -1,0 +1,22 @@
+# Allowlist: nothing from the developer's home, Git or credentials is sent.
+**
+!Dockerfile
+!nginx.conf
+!index.html
+!zarrosim.js
+!zarrosim.wasm
+!LICENSE
+!THIRD_PARTY.md
+!licenses/
+!licenses/**
+!resources/
+!resources/**
+resources/**/index.html
+resources/**/*.rc
+resources/**/*.post
+resources/dialogs/html/
+resources/**/*.bmp
+resources/icons/*.ico
+!resources/icons/1.ico
+resources/strings/*.json
+!resources/strings/strings.json

@@ -1,9 +1,115 @@
-<div align="center">
-  <a href="https://andreax79.github.io/tabboz/" target="_blank"><img alt="Tabboz Simulator" src="https://github.com/andreax79/tabboz/assets/1288154/64269165-8958-4f3a-945a-82c3ffffd4de"/></a>
-</div>
-<br/>
+# Tabboz Simulator su Linux con Docker
 
-Simply tap the icon to launch the Tabboz Simulator directly in your browser.
+Questa versione serve la conversione web originale: grafica Windows 95/98,
+JavaScript, WebAssembly, font e suoni già inclusi. Il gioco viene eseguito nel
+browser; il container contiene soltanto Nginx e i file statici necessari.
+
+## Avvio
+
+Occorrono Docker Engine avviato e il plugin Docker Compose v2. Non servono
+Node, Python, Emscripten o Wine sul computer dell'utente.
+
+Dalla directory del progetto:
+
+```sh
+docker compose up --build -d
+```
+
+Aprire **http://localhost:8080** e fare clic sull'icona **Tabboz Simulator**.
+La porta è pubblicata esclusivamente su `127.0.0.1`, per l'accesso locale.
+Il primo download dell'immagine Nginx richiede Internet; dopo la build tutti
+i file distribuiti con il gioco sono locali, compresi suoni, font e nastro GitHub.
+Il collegamento GitHub apre un sito esterno soltanto se selezionato.
+Il container deve rimanere avviato anche quando Internet non è disponibile.
+Non aprire `index.html` tramite `file://`: le risorse vengono caricate via HTTP.
+
+```sh
+# Stato e diagnostica
+docker compose ps
+docker compose logs --tail=50 web
+
+# Arresto e rimozione del container
+docker compose down
+
+# Riavvio senza ricostruzione
+docker compose up -d
+
+# Dopo aver aggiornato i file del progetto
+docker compose up --build -d
+```
+
+La base Nginx è fissata tramite digest nel Dockerfile. Per aggiornare anche
+Nginx bisogna aggiornare quel riferimento a una nuova immagine ufficiale,
+quindi ricostruire. Il normale aggiornamento dei file non scarica una base diversa.
+
+## Salvataggi
+
+La conversione web usa già il `localStorage` del browser: `readkey.c` richiama
+le funzioni di registro Novantotto, tradotte nel JavaScript incluso in accessi
+al `localStorage`. I dati si trovano sotto il prefisso
+`HKEY_CURRENT_USER\Software\Obscured Truckware\Tabboz Simulator 32`, con
+una voce per ciascun valore del registro e contenuto JSON.
+
+Il gioco salva a fine giornata, quando si chiudono le finestre delle informazioni
+personali o della configurazione e quando si esce tramite **File → Chiudi...**.
+Prima di chiudere la scheda, usare l'uscita del gioco e confermarla. Non è
+implementato un salvataggio aggiuntivo alla chiusura improvvisa della scheda:
+le azioni successive all'ultimo punto di salvataggio possono andare perse.
+Le voci originali **Apri...** e **Salva con nome...** sono disabilitate nella
+conversione web; non costituiscono esportazione/importazione di file.
+
+I salvataggi rimangono nel profilo del browser dopo chiusura e riapertura,
+riavvio, ricostruzione o rimozione del container. **Un volume Docker non li
+protegge.** Usare sempre lo stesso browser, profilo e indirizzo:
+`http://localhost:8080` e `http://127.0.0.1:8080` hanno archivi diversi, così
+come porte diverse. Evitare navigazione privata, cancellazione dei dati del
+sito, pulitori automatici e blocco dell'archiviazione locale.
+
+Per proteggerli prima di eliminare un profilo o cambiare computer, fare una
+copia del profilo del browser con il browser chiuso, secondo la documentazione
+del browser utilizzato. I dati sono ispezionabili negli strumenti sviluppatore,
+in **Application/Archiviazione → Local Storage → http://localhost:8080**.
+Non è stata verificata la compatibilità con i vecchi salvataggi Windows.
+
+## Problemi comuni
+
+- **Docker non raggiungibile / permission denied:** verificare che il daemon sia
+  avviato e che l'utente abbia accesso a Docker secondo la configurazione Linux.
+- **Porta 8080 occupata:** arrestare il servizio che la usa, oppure cambiare solo
+  la porta host in `compose.yaml`, mantenendo `127.0.0.1`. Il nuovo indirizzo avrà
+  salvataggi separati: per ritrovare quelli precedenti tornare alla porta originale.
+- **Pagina vecchia o errore di caricamento:** controllare `docker compose ps` e i
+  log, poi ricaricare la pagina senza cache. Non cancellare i dati del sito per
+  risolvere un problema di cache: contengono il salvataggio.
+- **Nessun suono:** interagire con il gioco, verificare l'opzione suoni nella
+  configurazione e che la scheda e l'uscita audio non siano silenziate. I WAV
+  sono locali; il browser può bloccare l'audio prima di un'interazione.
+- **Partita mancante:** verificare browser, profilo, indirizzo e porta originali,
+  oltre alle impostazioni che cancellano i dati alla chiusura.
+
+## Verifiche e limiti
+
+Le verifiche locali sono descritte in `VERIFICATION.md`, distinguendo controlli
+HTTP e dei file dalle prove interattive. Nessuna modifica alla logica C o ai
+binari JavaScript/WebAssembly è necessaria per servire questa distribuzione.
+
+Sono presenti 28 WAV. Tre effetti richiamati dal codice sono assenti già nella
+distribuzione web originale: `tabs0401.wav` (bocciatura), `tabs0601.wav` (rifiuto
+della tipa) e `tabs1400.wav` (metallone). Quegli eventi possono richiedere un
+file inesistente e rimanere senza suono. Non sono stati sostituiti con effetti
+diversi. Gameplay, riproduzione audio e persistenza effettiva nel browser
+restano da verificare interattivamente: il servizio browser dell'ambiente
+di lavoro non era disponibile.
+
+La build Docker usa gli artefatti compilati già presenti nel repository;
+non ricompila il gioco. Il Makefile di sviluppo originale riportato sotto
+scarica Novantotto senza fissarne la revisione: non è un percorso di rebuild
+riproducibile e non viene eseguito da Docker.
+
+Licenza originale in [LICENSE](LICENSE); attribuzioni e licenze dei componenti
+in [THIRD_PARTY.md](THIRD_PARTY.md) e `licenses/`, incluse nell'immagine.
+
+---
 
 ## 🖥️ Web development
 
