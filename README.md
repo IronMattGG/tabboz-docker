@@ -1,5 +1,10 @@
 # Tabboz Simulator — versione Docker
 
+<div align="center">
+  <a href="https://andreax79.github.io/tabboz/" target="_blank"><img alt="Tabboz Simulator Screenshot" src="https://github.com/andreax79/tabboz/assets/1288154/0999ef77-3e7a-45a0-9a0b-1206a6f5bddd"/></a>
+</div>
+<br/>
+
 Tabboz Simulator con la grafica Windows 95/98 della conversione web originale,
 avviabile con Docker Compose. Il gioco gira nel browser tramite
 JavaScript e WebAssembly; Nginx serve i file dal container.
