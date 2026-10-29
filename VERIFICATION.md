@@ -1,5 +1,42 @@
 # Verifica locale — 29 ottobre 2026
 
+## Correzione dei dialoghi
+
+È stata riprodotta con un test la mancata liberazione dei controlli nella
+revisione originale di Novantotto: `ReleaseHandle` confrontava un puntatore
+`RESOURCE *` con l'handle numerico della finestra. I figli rimanevano allocati,
+riducendo progressivamente i 100 slot disponibili. La correzione vendorizzata
+confronta gli handle, rilascia ricorsivamente i figli e azzera gli slot al
+rilascio. `DialogBox` conserva il risultato prima di distruggere lo slot.
+
+Verifiche della correzione:
+
+- Test originale fallito con un'asserzione sui figli rimasti allocati.
+- 500 cicli con 24 controlli, un dialogo annidato e il suo controllo per ciclo:
+  nessun handle residuo; finestre estranee preservate; slot di controlli riusati
+  anche come finestre senza vecchi nomi di classe o callback.
+- Stesso test nativo con AddressSanitizer e UndefinedBehaviorSanitizer superato.
+  LeakSanitizer non utilizzabile nell'ambiente sotto ptrace; esclusa solo quella
+  verifica, senza dichiarare una verifica generale di tutte le perdite di memoria.
+- Test del risultato di `DialogBox`: 50 chiusure tramite callback, risultato
+  corretto anche dopo il rilascio della finestra.
+- Test compilati in WebAssembly ed eseguiti con Node nello stadio Emscripten
+  della build Docker, quindi ricompilazione del gioco e ricreazione del container.
+- Sulla build corretta: 301 file HTTP 200, MIME `application/wasm`, JavaScript
+  sintatticamente valido, Wasm valido con le sette API del gioco richieste dal
+  Makefile. Gli export interni del runtime possono differire rispetto al vecchio
+  SDK: JavaScript e Wasm vengono generati insieme e serviti come coppia.
+- Configurazioni Compose e Nginx valide, container healthy, porta ancora
+  limitata a `127.0.0.1:8080`; sorgenti, SDK e test assenti dal server finale.
+
+Questi test verificano il ciclo di vita dei dialoghi e delle risorse C, senza
+simulare clic nel browser. Il servizio browser continua a restituire
+`The browser access host is unavailable`: il problema riscontrato è compatibile
+con i blocchi segnalati, ma la sequenza interattiva dell'utente non è stata
+riprodotta e la correzione non dimostra l'assenza di ulteriori cause di blocco.
+
+## Verifica iniziale della configurazione Docker (prima della correzione)
+
 ## Eseguito
 
 - `docker compose config --quiet`: configurazione valida.

@@ -1,4 +1,5 @@
-novantotto_home = novantotto
+novantotto_home = vendor/novantotto
+NODE ?= node
 sources = disco.c \
 		  eventi.c \
 		  lavoro.c \
@@ -33,8 +34,17 @@ build: copy
 format:
 	clang-format -i *.h *.c
 
-$(novantotto_home):
-	@git clone https://github.com/andreax79/novantotto.git $(novantotto_home)
+.PHONY: test
+test:
+	emcc tests/novantotto-handles.c $(novantotto_home)/handle.c $(novantotto_home)/property.c \
+		-I $(novantotto_home) -s ASSERTIONS=2 -s EXIT_RUNTIME=1 -s ENVIRONMENT=node \
+		-o /tmp/novantotto-handles.js
+	$(NODE) /tmp/novantotto-handles.js
+	emcc tests/novantotto-dialog-result.c $(novantotto_home)/dialog.c $(novantotto_home)/handle.c $(novantotto_home)/property.c \
+		-I $(novantotto_home) -s ASSERTIONS=2 -s EXIT_RUNTIME=1 -s ENVIRONMENT=node \
+		-s ASYNCIFY -s 'ASYNCIFY_IMPORTS=["emscripten_asm_const_int"]' \
+		-o /tmp/novantotto-dialog-result.js
+	$(NODE) /tmp/novantotto-dialog-result.js
 
 .PHONY: export
 export: copy

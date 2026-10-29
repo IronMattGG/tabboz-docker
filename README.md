@@ -17,7 +17,7 @@ docker compose up --build -d
 
 Aprire **http://localhost:8080** e fare clic sull'icona **Tabboz Simulator**.
 La porta è pubblicata esclusivamente su `127.0.0.1`, per l'accesso locale.
-Il primo download dell'immagine Nginx richiede Internet; dopo la build tutti
+Il primo download delle immagini Emscripten e Nginx richiede Internet; dopo la build tutti
 i file distribuiti con il gioco sono locali, compresi suoni, font e nastro GitHub.
 Il collegamento GitHub apre un sito esterno soltanto se selezionato.
 Il container deve rimanere avviato anche quando Internet non è disponibile.
@@ -90,8 +90,12 @@ Non è stata verificata la compatibilità con i vecchi salvataggi Windows.
 ## Verifiche e limiti
 
 Le verifiche locali sono descritte in `VERIFICATION.md`, distinguendo controlli
-HTTP e dei file dalle prove interattive. Nessuna modifica alla logica C o ai
-binari JavaScript/WebAssembly è necessaria per servire questa distribuzione.
+HTTP e dei file dalle prove interattive. È stata corretta in Novantotto la
+liberazione dei controlli dei dialoghi: la versione originale lasciava occupati
+gli slot della tabella di 100 handle e poteva esaurirli dopo aperture ripetute.
+La chiusura libera anche i controlli annidati e azzera gli slot prima del riuso;
+il valore restituito dal dialogo viene conservato prima della distruzione.
+La logica del gioco e il formato dei salvataggi rimangono quelli originali.
 
 Sono presenti 28 WAV. Tre effetti richiamati dal codice sono assenti già nella
 distribuzione web originale: `tabs0401.wav` (bocciatura), `tabs0601.wav` (rifiuto
@@ -101,10 +105,18 @@ diversi. Gameplay, riproduzione audio e persistenza effettiva nel browser
 restano da verificare interattivamente: il servizio browser dell'ambiente
 di lavoro non era disponibile.
 
-La build Docker usa gli artefatti compilati già presenti nel repository;
-non ricompila il gioco. Il Makefile di sviluppo originale riportato sotto
-scarica Novantotto senza fissarne la revisione: non è un percorso di rebuild
-riproducibile e non viene eseguito da Docker.
+La build Docker è multistadio: compila il gioco con Emscripten 3.1.56 e la
+copia locale di Novantotto, fissata alla revisione
+`12176b4d630bfb2d7426ff8b5ddf81bbc875e550`. Le immagini SDK e Nginx sono fissate
+tramite digest; anche la data incorporata dal compilatore è costante.
+La build esegue i test di regressione in WebAssembly, poi copia soltanto gli
+artefatti generati nel server statico. Non occorre installare strumenti extra
+sul computer dell'utente. I `zarrosim.js`/`zarrosim.wasm` storici alla radice
+non vengono usati dall'immagine Docker; la versione corretta viene ricompilata
+dal Makefile. Modifiche locali alla dipendenza: `vendor/novantotto/UPSTREAM.md`.
+
+Dopo un aggiornamento, eseguire `docker compose up --build -d` e ricaricare
+il browser con **Ctrl+Shift+R**, senza cancellare i dati del sito.
 
 Licenza originale in [LICENSE](LICENSE); attribuzioni e licenze dei componenti
 in [THIRD_PARTY.md](THIRD_PARTY.md) e `licenses/`, incluse nell'immagine.
