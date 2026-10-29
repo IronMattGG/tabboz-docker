@@ -6,3 +6,19 @@
 *.bak
 *.BAK
 /novantotto
+
+# Local credentials and editor/OS files
+.env
+.env.*
+!.env.example
+/.aws/
+/.codex/
+/.agents/
+.idea/
+.vscode/
+.DS_Store
+*~
+*.log
+
+# Local save backups (keep the shipped JS/Wasm tracked)
+/backups/
