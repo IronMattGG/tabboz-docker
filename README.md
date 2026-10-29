@@ -1,169 +1,162 @@
-# Tabboz Simulator su Linux con Docker
+# Tabboz Simulator — versione Docker
 
-Questa versione serve la conversione web originale: grafica Windows 95/98,
-JavaScript, WebAssembly, font e suoni già inclusi. Il gioco viene eseguito nel
-browser; il container contiene soltanto Nginx e i file statici necessari.
+Tabboz Simulator con la grafica Windows 95/98 della conversione web originale,
+avviabile con Docker Compose. Il gioco gira nel browser tramite
+JavaScript e WebAssembly; Nginx serve i file dal container.
 
-## Avvio
+## Novità di questa versione
 
-Occorrono Docker Engine avviato e il plugin Docker Compose v2. Non servono
-Node, Python, Emscripten o Wine sul computer dell'utente.
+- Avvio con un solo comando, senza installare Wine, Node, Python o Emscripten.
+- Accesso locale su **http://localhost:8080**, con porta pubblicata solo su `127.0.0.1`.
+- Risorse distribuite con il gioco disponibili localmente, compresi font,
+  immagini e suoni, per l'uso senza Internet dopo la build.
+- Correzione della gestione dei dialoghi di Novantotto: la chiusura libera i
+  controlli figli e permette di riutilizzare le risorse dopo aperture ripetute.
+- Compilazione multistadio con versioni fissate e test di regressione eseguiti
+  durante la build. Il container finale contiene soltanto il server e i file web.
 
-Dalla directory del progetto:
+## Requisiti
+
+Docker Engine avviato e plugin **Docker Compose v2**. Per la prima build serve
+Internet per scaricare le immagini Emscripten e Nginx. Gli strumenti di
+compilazione sono inclusi nello stadio di build Docker.
+
+## Installazione e avvio
 
 ```sh
+git clone https://github.com/IronMattGG/tabboz-docker.git
+cd tabboz-docker
 docker compose up --build -d
 ```
 
-Aprire **http://localhost:8080** e fare clic sull'icona **Tabboz Simulator**.
-La porta è pubblicata esclusivamente su `127.0.0.1`, per l'accesso locale.
-Il primo download delle immagini Emscripten e Nginx richiede Internet; dopo la build tutti
-i file distribuiti con il gioco sono locali, compresi suoni, font e nastro GitHub.
-Il collegamento GitHub apre un sito esterno soltanto se selezionato.
-Il container deve rimanere avviato anche quando Internet non è disponibile.
-Non aprire `index.html` tramite `file://`: le risorse vengono caricate via HTTP.
+Se hai già scaricato il progetto, esegui soltanto l'ultimo comando dalla sua
+directory. Apri **http://localhost:8080** e fai clic sull'icona
+**Tabboz Simulator**.
+
+Il container deve rimanere avviato mentre giochi. Dopo la build non occorrono
+servizi esterni per caricare le risorse incluse; il collegamento GitHub apre
+un sito esterno soltanto se selezionato. Non aprire `index.html` tramite
+`file://`: il gioco carica le risorse via HTTP.
+
+## Gestione e aggiornamenti
 
 ```sh
-# Stato e diagnostica
+# Stato e log
 docker compose ps
 docker compose logs --tail=50 web
 
 # Arresto e rimozione del container
 docker compose down
 
-# Riavvio senza ricostruzione
+# Avvio dell'immagine già costruita
 docker compose up -d
 
-# Dopo aver aggiornato i file del progetto
+# Riavvio del servizio
+docker compose restart web
+```
+
+Per aggiornare una copia clonata con Git, dalla directory del progetto:
+
+```sh
+git pull --ff-only
 docker compose up --build -d
 ```
 
-La base Nginx è fissata tramite digest nel Dockerfile. Per aggiornare anche
-Nginx bisogna aggiornare quel riferimento a una nuova immagine ufficiale,
-quindi ricostruire. Il normale aggiornamento dei file non scarica una base diversa.
+Poi ricarica il browser con **Ctrl+Shift+R**, senza cancellare i dati del sito.
+Se hai modifiche locali, conservale prima di aggiornare i sorgenti.
+Le immagini base sono fissate tramite digest nel [Dockerfile](Dockerfile):
+per aggiornare anche SDK o Nginx occorre modificare quei riferimenti e ricostruire.
 
 ## Salvataggi
 
-La conversione web usa già il `localStorage` del browser: `readkey.c` richiama
-le funzioni di registro Novantotto, tradotte nel JavaScript incluso in accessi
-al `localStorage`. I dati si trovano sotto il prefisso
-`HKEY_CURRENT_USER\Software\Obscured Truckware\Tabboz Simulator 32`, con
-una voce per ciascun valore del registro e contenuto JSON.
+La partita viene salvata nel **localStorage del browser**, nel suo profilo,
+per l'indirizzo `http://localhost:8080`. I dati non risiedono nel container:
+un volume Docker non ne costituisce un backup. Arrestare, ricostruire o
+ricreare il container non cancella l'archivio del browser.
 
-Il gioco salva a fine giornata, quando si chiudono le finestre delle informazioni
-personali o della configurazione e quando si esce tramite **File → Chiudi...**.
-Prima di chiudere la scheda, usare l'uscita del gioco e confermarla. Non è
-implementato un salvataggio aggiuntivo alla chiusura improvvisa della scheda:
-le azioni successive all'ultimo punto di salvataggio possono andare perse.
-Le voci originali **Apri...** e **Salva con nome...** sono disabilitate nella
-conversione web; non costituiscono esportazione/importazione di file.
+Il gioco salva a fine giornata, alla chiusura delle finestre delle informazioni
+personali o della configurazione e all'uscita tramite **File → Chiudi...**.
+Prima di chiudere la scheda, usa l'uscita del gioco e confermala. La chiusura
+improvvisa della scheda può perdere le azioni successive all'ultimo salvataggio.
+Le voci **Apri...** e **Salva con nome...** della conversione web sono disabilitate.
 
-I salvataggi rimangono nel profilo del browser dopo chiusura e riapertura,
-riavvio, ricostruzione o rimozione del container. **Un volume Docker non li
-protegge.** Usare sempre lo stesso browser, profilo e indirizzo:
-`http://localhost:8080` e `http://127.0.0.1:8080` hanno archivi diversi, così
-come porte diverse. Evitare navigazione privata, cancellazione dei dati del
-sito, pulitori automatici e blocco dell'archiviazione locale.
+Per ritrovare la partita, usa sempre lo stesso browser, profilo, indirizzo e
+porta. `localhost` e `127.0.0.1` hanno archivi separati; anche cambiare porta
+crea un'origine diversa. Evita navigazione privata, cancellazione dei dati
+del sito e pulitori automatici. Prima di eliminare il profilo o cambiare
+computer, esegui una copia del profilo con il browser chiuso, secondo le
+istruzioni del browser utilizzato.
 
-Per proteggerli prima di eliminare un profilo o cambiare computer, fare una
-copia del profilo del browser con il browser chiuso, secondo la documentazione
-del browser utilizzato. I dati sono ispezionabili negli strumenti sviluppatore,
-in **Application/Archiviazione → Local Storage → http://localhost:8080**.
-Non è stata verificata la compatibilità con i vecchi salvataggi Windows.
+Per ispezionare i dati: strumenti sviluppatore → **Application/Archiviazione →
+Local Storage → http://localhost:8080**. Le chiavi iniziano con
+`HKEY_CURRENT_USER\Software\Obscured Truckware\Tabboz Simulator 32`.
+La compatibilità con i vecchi salvataggi Windows non è stata verificata.
+
+## Correzione dei dialoghi e compilazione
+
+La versione originale di Novantotto non liberava i controlli figli alla
+chiusura delle finestre. Aperture ripetute potevano esaurire la tabella di
+100 handle e bloccare i dialoghi. Questa versione rilascia i figli
+ricorsivamente, azzera gli slot prima del riuso e conserva il risultato del
+dialogo prima di distruggerlo. La logica del gioco e il formato dei salvataggi
+rimangono quelli originali.
+
+La build usa **Emscripten 3.1.56**, **Nginx 1.30.6** e Novantotto alla revisione
+`12176b4d630bfb2d7426ff8b5ddf81bbc875e550`, incluso in `vendor/novantotto` con
+le correzioni locali. Anche la data incorporata dal compilatore è fissata.
+I dettagli sono in [UPSTREAM.md](vendor/novantotto/UPSTREAM.md).
+
+Docker esegue `make test build` e copia nel server JavaScript e WebAssembly
+appena generati. I file `zarrosim.js` e `zarrosim.wasm` storici alla radice del
+repository non vengono usati dall'immagine Docker.
+Per eseguire soltanto lo stadio di compilazione e test:
+
+```sh
+docker build --target build -t tabboz-build .
+```
+
+## Verifiche e limiti noti
+
+Sono stati verificati build e avvio reali, riavvio e ricreazione del container,
+stato `healthy`, configurazioni Compose/Nginx, 301 file via HTTP e MIME
+`application/wasm`. I test di regressione coprono 500 cicli di dialoghi
+annidati e 50 verifiche del risultato restituito alla chiusura.
+
+Le prove automatiche non sostituiscono la verifica interattiva del gameplay.
+Il browser controllabile dell'ambiente di sviluppo era indisponibile:
+audio, recupero dei salvataggi e una sessione senza Internet restano da
+verificare con un browser. Risultati e procedura manuale sono in
+[VERIFICATION.md](VERIFICATION.md).
+
+Sono inclusi 28 WAV. Tre effetti richiamati dal codice mancano già nella
+conversione web originale: `tabs0401.wav` (bocciatura), `tabs0601.wav` (rifiuto
+della tipa) e `tabs1400.wav` (metallone). Quegli eventi possono restare senza
+suono e generare richieste HTTP 404.
 
 ## Problemi comuni
 
-- **Docker non raggiungibile / permission denied:** verificare che il daemon sia
-  avviato e che l'utente abbia accesso a Docker secondo la configurazione Linux.
-- **Porta 8080 occupata:** arrestare il servizio che la usa, oppure cambiare solo
-  la porta host in `compose.yaml`, mantenendo `127.0.0.1`. Il nuovo indirizzo avrà
-  salvataggi separati: per ritrovare quelli precedenti tornare alla porta originale.
-- **Pagina vecchia o errore di caricamento:** controllare `docker compose ps` e i
-  log, poi ricaricare la pagina senza cache. Non cancellare i dati del sito per
-  risolvere un problema di cache: contengono il salvataggio.
-- **Nessun suono:** interagire con il gioco, verificare l'opzione suoni nella
-  configurazione e che la scheda e l'uscita audio non siano silenziate. I WAV
-  sono locali; il browser può bloccare l'audio prima di un'interazione.
-- **Partita mancante:** verificare browser, profilo, indirizzo e porta originali,
-  oltre alle impostazioni che cancellano i dati alla chiusura.
+- **Docker non raggiungibile o permission denied:** verifica che il daemon sia
+  avviato e che il tuo utente abbia accesso a Docker.
+- **Porta 8080 occupata:** arresta il servizio che la usa oppure modifica la
+  porta host in [compose.yaml](compose.yaml), mantenendo `127.0.0.1`. Alla nuova
+  porta i salvataggi saranno separati; quelli precedenti restano all'origine originale.
+- **Pagina vecchia o dialoghi ancora bloccati dopo l'aggiornamento:** ricostruisci
+  con `docker compose up --build -d` e ricarica con **Ctrl+Shift+R**. Se il blocco
+  si ripete, annota il dialogo, i passaggi e gli errori della console del browser.
+- **Nessun suono:** interagisci con il gioco, abilita i suoni nella configurazione
+  e controlla che scheda e uscita audio non siano silenziate. Alcuni browser
+  bloccano l'audio prima di un'interazione; tre effetti sono assenti come indicato sopra.
+- **Partita mancante:** controlla browser, profilo, indirizzo, porta e impostazioni
+  di cancellazione automatica. Non cancellare i dati del sito per svuotare la cache.
 
-## Verifiche e limiti
+## Progetto originale e licenze
 
-Le verifiche locali sono descritte in `VERIFICATION.md`, distinguendo controlli
-HTTP e dei file dalle prove interattive. È stata corretta in Novantotto la
-liberazione dei controlli dei dialoghi: la versione originale lasciava occupati
-gli slot della tabella di 100 handle e poteva esaurirli dopo aperture ripetute.
-La chiusura libera anche i controlli annidati e azzera gli slot prima del riuso;
-il valore restituito dal dialogo viene conservato prima della distruzione.
-La logica del gioco e il formato dei salvataggi rimangono quelli originali.
+Questa versione mantiene grafica e contenuti della
+[conversione web di Andrea Bonomi](https://github.com/andreax79/tabboz), basata su
+[Novantotto](https://github.com/andreax79/novantotto),
+[Emscripten](https://emscripten.org/) e [98.css](https://github.com/jdan/98.css).
 
-Sono presenti 28 WAV. Tre effetti richiamati dal codice sono assenti già nella
-distribuzione web originale: `tabs0401.wav` (bocciatura), `tabs0601.wav` (rifiuto
-della tipa) e `tabs1400.wav` (metallone). Quegli eventi possono richiedere un
-file inesistente e rimanere senza suono. Non sono stati sostituiti con effetti
-diversi. Gameplay, riproduzione audio e persistenza effettiva nel browser
-restano da verificare interattivamente: il servizio browser dell'ambiente
-di lavoro non era disponibile.
-
-La build Docker è multistadio: compila il gioco con Emscripten 3.1.56 e la
-copia locale di Novantotto, fissata alla revisione
-`12176b4d630bfb2d7426ff8b5ddf81bbc875e550`. Le immagini SDK e Nginx sono fissate
-tramite digest; anche la data incorporata dal compilatore è costante.
-La build esegue i test di regressione in WebAssembly, poi copia soltanto gli
-artefatti generati nel server statico. Non occorre installare strumenti extra
-sul computer dell'utente. I `zarrosim.js`/`zarrosim.wasm` storici alla radice
-non vengono usati dall'immagine Docker; la versione corretta viene ricompilata
-dal Makefile. Modifiche locali alla dipendenza: `vendor/novantotto/UPSTREAM.md`.
-
-Dopo un aggiornamento, eseguire `docker compose up --build -d` e ricaricare
-il browser con **Ctrl+Shift+R**, senza cancellare i dati del sito.
-
-Licenza originale in [LICENSE](LICENSE); attribuzioni e licenze dei componenti
-in [THIRD_PARTY.md](THIRD_PARTY.md) e `licenses/`, incluse nell'immagine.
-
----
-
-## 🖥️ Web development
-
-<div align="center">
-  <a href="https://andreax79.github.io/tabboz/" target="_blank"><img alt="Tabboz Simulator Screenshot" src="https://github.com/andreax79/tabboz/assets/1288154/0999ef77-3e7a-45a0-9a0b-1206a6f5bddd"/></a>
-</div>
-<br/>
-
-### 📖 Prerequisites
-
-In order to compile the project we need the following software installed on our development machine:
-- Python >= 3.8
-- [Emscripten](https://emscripten.org/)
-
-### 📦 Builds
-
-Build the project.
-
-```shell
-make build
-```
-
-We also have a script for updating dialogs used in the project, you only need to run this if you modify the `.rc` files:
-
-```shell
-make rc
-```
-
-### 🎨 Code linting
-
-To fix the linting errors, use the following command:
-
-```shell
-make format
-```
-
-### 🚀 Links
-
-- [Novantotto, A tool for porting Windows programs to WebAssembly](https://github.com/andreax79/novantotto)
-- [Emscripten, A complete compiler toolchain to WebAssembly](https://emscripten.org/)
-- [98.css, A design system for building faithful recreations of old UIs](https://github.com/jdan/98.css)
-
-## ⚖️ LICENSE
-
-[![GPL 3](https://www.gnu.org/graphics/gplv3-or-later.png)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+Tabboz Simulator è distribuito secondo la licenza **GPL-3.0-or-later** riportata
+nei sorgenti; il testo è in [LICENSE](LICENSE). Attribuzioni e licenze dei
+componenti sono in [THIRD_PARTY.md](THIRD_PARTY.md) e nella directory `licenses/`,
+incluse anche nell'immagine Docker.
